@@ -1,0 +1,503 @@
+Original file is located at
+    https://colab.research.google.com/drive/1uoXb2A5xN9AiaajCBZdO3pfo5ChuWrc6
+"""
+
+# IMPORTANT: RUN THIS CELL IN ORDER TO IMPORT YOUR KAGGLE DATA SOURCES,
+# THEN FEEL FREE TO DELETE THIS CELL.
+# NOTE: THIS NOTEBOOK ENVIRONMENT DIFFERS FROM KAGGLE'S PYTHON
+# ENVIRONMENT SO THERE MAY BE MISSING LIBRARIES USED BY YOUR
+# NOTEBOOK.
+import kagglehub
+aleespinosa_apple_watch_and_fitbit_data_path = kagglehub.dataset_download('aleespinosa/apple-watch-and-fitbit-data')
+
+print('Data source import complete.')
+
+"""# DATA EXPLORATION"""
+
+# Data Collection, Data Cleaning & Data Manipulation
+import numpy as np
+import pandas as pd
+from sklearn import datasets
+
+# Data Visualization
+import matplotlib
+import matplotlib.pyplot as plt
+import seaborn as sns
+sns.set(font_scale = 1)
+
+# Data Transformation
+from sklearn import preprocessing
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder
+from scipy import stats
+
+# Pipeline
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import FunctionTransformer
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import make_pipeline
+from sklearn.pipeline import Pipeline
+from sklearn.compose import make_column_selector, make_column_transformer
+from sklearn import set_config
+set_config(display='diagram')
+
+# Models Building
+import sklearn
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler, RobustScaler, MinMaxScaler
+
+# Classification Problems
+from sklearn.neural_network import MLPClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
+from sklearn.tree import DecisionTreeClassifier
+from sklearn. ensemble import RandomForestClassifier, AdaBoostClassifier
+from sklearn.naive_bayes import GaussianNB
+from xgboost import XGBClassifier
+from sklearn import metrics
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, roc_curve, auc
+from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.model_selection import cross_val_score
+
+# Regression Problems
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.svm import SVR
+from sklearn.linear_model import LinearRegression, LogisticRegression, SGDRegressor
+from sklearn.tree import DecisionTreeRegressor, ExtraTreeRegressor
+from sklearn.ensemble import RandomForestRegressor, ExtraTreesRegressor, GradientBoostingRegressor, AdaBoostRegressor
+from xgboost import XGBRegressor
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+
+# Hyperparameter Tuning
+from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import RandomizedSearchCV
+import warnings
+warnings.filterwarnings('ignore')
+from sklearn.exceptions import ConvergenceWarning
+
+# Explainbale AI (XAI)
+# !pip install lime
+# import lime.lime_tabular
+# !pip install shap
+# import shap
+
+# Unsupervised Learning: Clustering
+from sklearn.cluster import KMeans, AgglomerativeClustering, DBSCAN, Birch, MeanShift, SpectralClustering
+from sklearn.metrics import adjusted_rand_score
+
+import plotly.graph_objects as go
+
+# pip install -U dataprep
+
+# !pip install pycaret[full]
+
+# from dataprep.eda import *
+# from pycaret.classification import *
+
+data = pd.read_csv('/content/aw_fb_data.csv')
+
+from google.colab import drive
+drive.mount('/content/drive')
+
+data.shape
+
+data.info()
+
+data.head()
+
+data.describe().transpose()
+
+for col in data.select_dtypes('object'):
+    plt.figure()
+    data[col].value_counts().plot.pie()
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Create subplots
+fig, axs = plt.subplots(1, 2, figsize=(15, 5))
+
+# Age vs. Heart Rate Count Plot with Custom Colors
+sns.countplot(ax=axs[0], x='age', hue='activity', data=data, palette='Blues')
+
+# Gender vs. Heart Rate Count Plot with Custom Colors
+sns.countplot(ax=axs[1], x='gender', hue='activity', data=data, palette='Blues')
+
+# Show the plots
+plt.show()
+
+sns.heatmap(pd.crosstab(data["activity"],data["device"]),annot=True,fmt='d')
+
+# plt.rcParams.update({'font.size': 10})
+
+sns.set(font_scale = 1)
+
+data.hist(bins = 20, color = 'orange', figsize = (20, 14))
+
+data.activity.value_counts()
+
+data[data.activity == 'Lying'].head()
+
+data[data.activity == 'Running 7 METs'].head()
+
+data.device.value_counts()
+
+"""# TRAIN-TEST SPLIT"""
+
+# df_aw = data[data['device']=='apple watch']
+
+# df_aw=df_aw.drop('device', axis=1)
+
+np.random.seed(42)
+
+from sklearn.model_selection import train_test_split
+
+train_set, test_set = train_test_split(data, test_size = 0.2, random_state = 42)
+
+"""# DATA CLEANING"""
+
+train_set.columns
+
+#df.columns = df.columns.str.strip().str.lower().str.replace(' ', '_').str.replace('(', '').str.replace(')', '')
+
+#df.columns
+
+train_set.isnull().sum()
+
+train_set.duplicated().sum()
+
+"""# DATA ANALYSIS"""
+
+train_set.columns
+
+categorical_df = train_set.select_dtypes(include = 'object')
+
+categorical_df.info()
+
+for col in categorical_df.columns:
+    print(f'{col}: {categorical_df[col].nunique()}')
+    print('\n')
+
+labels = ['Lying','Running 7 METs','Running 5 METs','Running 3 METs', 'Sitting', 'Self Pace walk']
+values = train_set['activity'].value_counts()
+colors = ['red', 'royalblue','green','yellow','pink','grey']
+fig = go.Figure(data=[go.Pie(labels=labels, values=values, hole=.5)])
+fig.update_traces(hoverinfo='label+value',textfont_size=15,marker=dict(colors=colors))
+fig.update_layout(annotations=[dict(text='6 types of Activity',
+                                    x=0.50, y=0.5, font_size=15,
+                                    showarrow=False)])
+fig.show()
+
+num_df = train_set.select_dtypes(include = 'number')
+
+import seaborn
+
+import matplotlib.pyplot as plt
+print(plt.style.available)
+
+plt.style.use('tableau-colorblind10')
+
+names = list(num_df.columns)
+
+plot_per_row = 2
+
+f, axes = plt.subplots(round(len(names)/plot_per_row), plot_per_row, figsize = (15, 25))
+
+y = 0;
+
+for name in names:
+    i, j = divmod(y, plot_per_row)
+    sns.histplot(x=num_df[name], kde = True, ax=axes[i, j], color = 'purple')
+    y = y + 1
+
+plt.tight_layout()
+plt.show()
+
+plt.style.use('tableau-colorblind10')
+
+names = list(num_df.columns)
+
+plot_per_row = 2
+
+f, axes = plt.subplots(round(len(names)/plot_per_row), plot_per_row, figsize = (15, 25))
+
+y = 0;
+
+for name in names:
+    i, j = divmod(y, plot_per_row)
+    sns.boxplot(x=num_df[name], ax=axes[i, j], palette = 'Set3')
+    y = y + 1
+
+plt.tight_layout()
+plt.show()
+
+plt.figure(figsize = (20, 14))
+
+corr_matrix = num_df.corr()
+
+g = sns.heatmap(
+    corr_matrix,
+    annot = True,
+    cmap='magma',
+)
+
+g.set_xticklabels(g.get_xticklabels(), rotation=25, horizontalalignment='right')
+
+plt.title('Correlation between numerical features')
+plt.show()
+
+df_a = data[data['device']=='apple watch'].copy()
+df_a.reset_index(drop=True,inplace=True)
+
+plt.figure(figsize=(15,10))
+sns.regplot(data = df_a, x='calories', y='hear_rate')
+plt.title('Heart rate Vs. Age')
+plt.tight_layout()
+
+import pandas as pd
+
+
+df = pd.read_csv("/content/aw_fb_data.csv")  # Replace with your actual dataset file
+
+
+
+# Check if 'heart_rate' and 'age' columns exist
+print(df.columns)
+
+# Calculate Pearson correlation
+correlation = df["hear_rate"].corr(df["gender"])
+
+print(f"Correlation between Heart Rate and Age: {correlation:.4f}")
+
+"""# FEATURES-TARGET SPLIT"""
+
+X_train = train_set.copy()
+y_train = X_train.pop("activity")
+
+from sklearn.preprocessing import LabelEncoder
+
+label_encoder = LabelEncoder()
+
+y_train = label_encoder.fit_transform(y_train)
+
+X_test = test_set.copy()
+y_test = X_test.pop("activity")
+
+from sklearn.preprocessing import LabelEncoder
+
+label_encoder = LabelEncoder()
+
+y_test = label_encoder.fit_transform(y_test)
+
+"""# DATA PIPELINE"""
+
+SimpleImputer.get_feature_names_out = (lambda self, names=None:
+                                       self.feature_names_in_)
+
+num_attribs = ['Unnamed: 0', 'X1', 'age', 'gender', 'height', 'weight', 'steps',
+       'hear_rate', 'calories', 'distance', 'entropy_heart', 'entropy_setps',
+       'resting_heart', 'corr_heart_steps', 'norm_heart', 'intensity_karvonen',
+       'sd_norm_heart', 'steps_times_distance']
+
+cat_attribs = ['device']
+
+num_pipeline = make_pipeline(SimpleImputer(strategy="median"),
+                             RobustScaler())
+
+cat_pipeline = make_pipeline(SimpleImputer(strategy="most_frequent"),
+                             OneHotEncoder(handle_unknown="ignore"))
+
+preprocessing = make_column_transformer(
+    (num_pipeline, num_attribs),
+    (cat_pipeline, cat_attribs))
+
+preprocessing
+
+def print_score(classifier, X_train, y_train, X_test, y_test):
+
+    # Training set
+
+    print('\n\n')
+
+    print("TRAINING RESULTS:\n")
+
+    # Predict
+    y_train_pred = classifier.predict(X_train)
+
+    # Evaluation
+    print(f'Classification Report:\n{classification_report(y_train, y_train_pred, digits = 4)}\n')
+
+#     print(f'ROC AUC Score: {roc_auc_score(y_train, y_train_pred)}\n')
+
+    print(f'Confusion Matrix:\n{confusion_matrix(y_train, y_train_pred)}\n')
+
+    fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(15,6))
+    ax[0].set_title("train")
+    ax[1].set_title("test")
+
+    print(sns.heatmap(confusion_matrix(y_train, y_train_pred), annot=True, fmt="g", ax=ax[0]))
+
+    print('\n\n')
+
+    # Test set
+
+    print("TEST RESULTS:\n")
+
+    # Predict
+    y_test_pred = classifier.predict(X_test)
+
+    # Evaluation
+    print(f'Classification Report:\n{classification_report(y_test, y_test_pred, digits = 4)}\n')
+
+#     print(f'ROC AUC Score: {roc_auc_score(y_test, y_test_pred)}\n')
+
+    print(f'Confusion Matrix:\n{confusion_matrix(y_test, y_test_pred)}\n')
+
+    print(sns.heatmap(confusion_matrix(y_test, y_test_pred), annot=True, fmt="g", ax=ax[1]))
+
+    print('\n\n')
+
+"""# LOGISTIC REGRESSION"""
+
+from sklearn.linear_model import LogisticRegression
+import scipy.stats as sp
+import statsmodels.api as sm
+import statsmodels.formula.api as smf
+# from sklearn import preprocessing
+from sklearn.metrics import mean_squared_error
+from sklearn.model_selection import train_test_split
+
+classifier = make_pipeline(preprocessing, LinearRegression())
+
+classifier.fit(X_train,y_train)
+
+classifier = Pipeline([
+    ("preprocessing", preprocessing),
+    ("logistic_regression", LogisticRegression()),
+])
+
+classifier.fit(X_train,y_train)
+
+classifier.named_steps["logistic_regression"].get_params()
+
+print_score(classifier, X_train, y_train, X_test, y_test)
+
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score
+
+# File paths (update paths if necessary)
+fitbit_file = "/content/data_for_weka_fb.csv"
+apple_watch_file = "/content/data_for_weka_aw.csv"
+ref_file="/content/aw_fb_data.csv"
+df_reference=pd.read_csv(ref_file)
+# Load datasets
+df_fitbit = pd.read_csv(fitbit_file)
+df_apple = pd.read_csv(apple_watch_file)
+
+print("Fitbit Data Shape:", df_fitbit.shape)
+print("Apple Watch Data Shape:", df_apple.shape)
+
+# Clean column names
+df_fitbit.columns = df_fitbit.columns.str.strip()
+df_apple.columns = df_apple.columns.str.strip()
+
+# Convert numeric columns (to handle potential string values)
+for df in [df_fitbit, df_apple]:
+    numeric_cols = df.select_dtypes(include=["object"]).columns  # Identify non-numeric columns
+    df[numeric_cols] = df[numeric_cols].apply(pd.to_numeric, errors="coerce")  # Convert to numeric
+
+# Define cardiovascular risk (Modify if needed)
+if "weight" in df_fitbit.columns and "FitbitStepsXDistance_LE" in df_fitbit.columns:
+    df_fitbit["cv_risk"] = ((df_fitbit["FitbitStepsXDistance_LE"] > 50) | (df_fitbit["weight"] >40)).astype(int)
+
+if "age" in df_apple.columns and "height" in df_apple.columns:
+    df_apple["cv_risk"] = ((df_apple["age"] > 20) | (df_apple["height"] > 100)).astype(int)
+
+# Check cardiovascular risk distribution
+if "cv_risk" in df_fitbit.columns:
+    print("Fitbit Risk Distribution:\n", df_fitbit["cv_risk"].value_counts())
+
+if "cv_risk" in df_apple.columns:
+    print("Apple Watch Risk Distribution:\n", df_apple["cv_risk"].value_counts())
+
+# Define feature sets for each device
+fitbit_features = ["age", "weight", "RestingFitbitHeartrate_LE", "FitbitStepsXDistance_LE"]
+apple_features = ["age", "height", "Applewatch.Heart_LE", "RestingApplewatchHeartrate_LE"]
+
+# Function to train and evaluate a model
+def evaluate_device(data, features, device_name):
+    if data.empty:
+        print(f"No data available for {device_name}!")
+        return None
+
+    if "cv_risk" not in data.columns:
+        print(f"cv_risk column missing in {device_name} dataset!")
+        return None
+
+    X = data[features]
+    y = data["cv_risk"]
+
+    # Ensure a balanced train-test split
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+
+    model = RandomForestClassifier(n_estimators=50, min_samples_split=10, random_state=42)
+    model.fit(X_train, y_train)
+    y_pred = model.predict(X_test)
+
+    accuracy = accuracy_score(y_test, y_pred)
+    #print(f"{device_name} Accuracy: {accuracy}")
+    #return accuracy
+    from sklearn.metrics import classification_report
+    print(f"{device_name} Classification Report:")
+    print(classification_report(y_test, y_pred))
+# Evaluate both devices
+#accuracy_fitbit = evaluate_device(df_fitbit, fitbit_features, "Fitbit")
+#accuracy_apple = evaluate_device(df_apple, apple_features, "Apple Watch")
+#from sklearn.metrics import classification_report
+    from sklearn.metrics import classification_report
+
+    print(f"{device_name} Classification Report:\n")
+    print(classification_report(y_test, y_pred))
+
+from sklearn.metrics import mean_absolute_error, mean_squared_error
+import numpy as np
+
+# Assuming you have HR readings for Fitbit, Apple Watch, and a reference monitor
+fitbit_hr = df_fitbit['NormalizedFitbitHeartrate_LE']
+apple_hr = df_apple['NormalizedApplewatchHeartrate_LE']
+# Ensure both datasets have the same length
+min_length = min(len(df_fitbit), len(df_apple))
+
+fitbit_hr = df_fitbit['NormalizedFitbitHeartrate_LE'][:min_length]
+apple_hr = df_apple['NormalizedApplewatchHeartrate_LE'][:min_length]
+
+# Compute reference heart rate
+#reference_hr = (fitbit_hr + apple_hr) / 2
+
+reference_hr = df_reference['hear_rate']  # Reference from ECG/chest strap
+min_len = min(len(reference_hr), len(fitbit_hr), len(apple_hr))
+reference_hr = reference_hr[:min_len]
+fitbit_hr = fitbit_hr[:min_len]
+apple_hr = apple_hr[:min_len]
+
+# Correlation with Reference
+correlation_fitbit = np.corrcoef(reference_hr, fitbit_hr)[0, 1]
+correlation_apple = np.corrcoef(reference_hr, apple_hr)[0, 1]
+
+print(f"Fitbit Correlation: {correlation_fitbit}")
+print(f"Apple Watch Correlation: {correlation_apple}")
+# Print Results
+print(f"Fitbit - Correlation: {correlation_fitbit}")
+print(f"Apple Watch - Correlation: {correlation_apple}")
+mae_fitbit = mean_absolute_error(reference_hr, fitbit_hr)
+mae_apple = mean_absolute_error(reference_hr, apple_hr)
+
+# Compute RMSE
+rmse_fitbit = np.sqrt(mean_squared_error(reference_hr, fitbit_hr))
+rmse_apple = np.sqrt(mean_squared_error(reference_hr, apple_hr))
+
+# Print results
+print(f"Fitbit - MAE: {mae_fitbit}, RMSE: {rmse_fitbit}")
+print(f"Apple Watch - MAE: {mae_apple}, RMSE: {rmse_apple}")
+    
